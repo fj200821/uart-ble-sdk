@@ -6,6 +6,7 @@ import argparse
 import sys
 
 import uart_ble.profiles  # noqa: F401  注册内置 profile
+from uart_ble.book.link import TransferError
 from uart_ble.registry import profile_ids
 from uart_ble.session import open_session
 from uart_ble.types import UartBleError
@@ -30,6 +31,17 @@ def main(argv: list[str] | None = None) -> int:
     _add_port_args(setup)
     setup.add_argument("--name", default=None, help="广播名，不超过该 profile 的长度限制")
 
+    send = sub.add_parser("send-book", help="在已经透传的串口上发送一本书")
+    _add_port_args(send)
+    send.add_argument("file")
+    send.add_argument("--protocol", default="ymodem", choices=("xmodem", "ymodem", "zmodem"))
+
+    recv = sub.add_parser("recv-book", help="在已经透传的串口上接收一本书")
+    _add_port_args(recv)
+    recv.add_argument("dest")
+    recv.add_argument("--protocol", default="ymodem", choices=("xmodem", "ymodem", "zmodem"))
+    recv.add_argument("--name", default="book.bin", help="XMODEM 没有文件名，用这个名字保存")
+
     args = parser.parse_args(argv)
     try:
         if args.cmd == "profiles":
@@ -44,7 +56,11 @@ def main(argv: list[str] | None = None) -> int:
             return _scan(args)
         if args.cmd == "setup":
             return _setup(args)
-    except UartBleError as exc:
+        if args.cmd == "send-book":
+            return _send_book(args)
+        if args.cmd == "recv-book":
+            return _recv_book(args)
+    except (UartBleError, TransferError, ValueError, OSError) as exc:
         print(f"error: {exc}")
         return 1
     return 2
@@ -87,6 +103,20 @@ def _scan(args) -> int:
     for item in found:
         name = item.local_name or "-"
         print(f"{item.address}\trssi={item.rssi}\tname={name}")
+    return 0
+
+
+def _send_book(args) -> int:
+    with open_session(args.port, baud=args.baud, profile=args.profile or "raw") as session:
+        session.send_book(args.file, args.protocol)
+    print(args.file)
+    return 0
+
+
+def _recv_book(args) -> int:
+    with open_session(args.port, baud=args.baud, profile=args.profile or "raw") as session:
+        saved = session.recv_book(args.dest, args.protocol, args.name)
+    print(saved)
     return 0
 
 

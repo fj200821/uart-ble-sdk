@@ -120,6 +120,32 @@ class UartBleSession:
         """读出对端写入、从串口吐出的数据。对应 readCharacteristic / readValue。"""
         return self._read_payload(max_bytes, timeout)
 
+    def send_book(self, file: str, protocol: str = "ymodem") -> None:
+        """在已连接的透传链路上发送一本书。protocol 为 xmodem、ymodem 或 zmodem。"""
+        self._require_transparent()
+        from uart_ble.book import send_book
+        from uart_ble.book.link import Link
+
+        send_book(Link(self.read_characteristic, self.write_characteristic), file, protocol)
+
+    def recv_book(self, dest_dir: str, protocol: str = "ymodem", name: str = "book.bin") -> str:
+        """在已连接的透传链路上接收一本书，返回保存路径。"""
+        self._require_transparent()
+        from uart_ble.book import recv_book
+        from uart_ble.book.link import Link
+
+        path = recv_book(
+            Link(self.read_characteristic, self.write_characteristic),
+            dest_dir,
+            protocol,
+            name,
+        )
+        return str(path)
+
+    def _require_transparent(self) -> None:
+        if self.profile.spec.probe_command and not self.is_connected:
+            raise UartBleError("传书要等 BLE 连上，串口才是透传")
+
     def set_baudrate(self, baudrate: int) -> None:
         """串口速率。对应 pySerial 的 baudrate，不是 BLE 概念。"""
         self.command("set_baudrate", value=baudrate)

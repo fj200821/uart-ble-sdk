@@ -27,6 +27,7 @@ write_characteristic、read_characteristic。模块 AT 只写在 profile 里。
 from uart_ble.profile import AtProfile, AtProfileSpec, CommandDef, EventDef
 from uart_ble.profiles import RAW, XY_DG02
 from uart_ble.registry import define_profile, get_profile, profile_ids
+from uart_ble.book import recv_book, send_book
 from uart_ble.session import UartBleSession, open_session
 from uart_ble.types import (
     AdapterIdentity,
@@ -67,4 +68,6 @@ __all__ = [
     "get_profile",
     "open_session",
     "profile_ids",
+    "recv_book",
+    "send_book",
 ]

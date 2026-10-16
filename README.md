@@ -20,9 +20,11 @@ python -m uart_ble ports
 python -m uart_ble info --port COM5
 python -m uart_ble scan --port COM5
 python -m uart_ble setup --port COM5 --name XY-DG02
+python -m uart_ble send-book --port COM5 book.txt --protocol ymodem
+python -m uart_ble recv-book --port COM5 received --protocol ymodem
 ```
 
-`info` 打开串口并识别模组。`scan` 扫一轮附近广播。`setup` 调用 `start_advertising`。
+`info` 打开串口并识别模组。`scan` 扫一轮附近广播。`setup` 调用 `start_advertising`。`send-book` 与 `recv-book` 在已经透传的串口上收发文件。
 
 ## 程序里用
 
@@ -104,6 +106,26 @@ define_profile(AtProfileSpec(
 ```
 
 更细的接口说明见 [docs/API.md](docs/API.md)。
+
+## 传书
+
+手机或另一块模组连上之后，串口是一条透传字节管道。在这条管道上可以跑 XMODEM、YMODEM、ZMODEM。115200 下大约 10 KB/s。
+
+两边都要先进入透传。命令行默认用 `raw`，不再发 AT。XMODEM 没有文件名，接收端用 `--name`。YMODEM 和 ZMODEM 会带上文件名和长度，并按长度去掉填充。
+
+```python
+from uart_ble import open_session
+
+with open_session('COM5', profile='raw') as session:
+    session.send_book('book.txt', protocol='ymodem')
+```
+
+另一端：
+
+```python
+with open_session('COM6', profile='raw') as session:
+    print(session.recv_book('received', protocol='ymodem'))
+```
 
 ## 许可
 

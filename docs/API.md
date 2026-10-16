@@ -31,6 +31,9 @@ open_session(port, baud=None, profile=None, timeout=0.45) -> UartBleSession
 | `set_baudrate(baudrate)` | 修改模组串口速率，并改本机串口。这是 pySerial 的概念 |
 | `poll(timeout=0)` | 取出连接、断开事件 |
 
+| `send_book(file, protocol="ymodem")` | 在透传链路上发送文件。协议为 xmodem、ymodem、zmodem |
+| `recv_book(dest_dir, protocol="ymodem", name="book.bin")` | 接收文件并返回保存路径。XMODEM 使用 `name` |
+
 `Advertisement` 的字段是 `address`、`rssi`、`local_name`、`address_type`。
 
 连接事件的 `link.role` 用 `PeerRole.CENTRAL` 或 `PERIPHERAL`，对应 iOS 的 Central / Peripheral。XY-DG02 上报里，类型 `0` 表示对端是主机。
@@ -38,6 +41,23 @@ open_session(port, baud=None, profile=None, timeout=0.45) -> UartBleSession
 ## 已经连接时
 
 除 `disconnect` 外，AT 指令会抛 `LinkBusy`。这时串口上的字节就是透传数据。
+
+## 传书
+
+`protocol` 取 `xmodem`、`ymodem`、`zmodem`。带 AT 的 profile 必须已经 `is_connected`，否则抛 `UartBleError`。`raw` 把串口视为已经透传。
+
+| 协议 | 文件名 | 长度 | 块 |
+|---|---|---|---|
+| XMODEM-CRC | 无，调用方给名字 | 收到的是 128 字节填充后的正文 | 128 |
+| YMODEM | 第 0 块里的文件名 | 按第 0 块里的长度截断 | 1024 |
+| ZMODEM | ZFILE 里的文件名 | 按 ZFILE 里的长度截断 | 1024，控制字节做 ZDLE 转义 |
+
+命令行在透传期间使用：
+
+```powershell
+python -m uart_ble send-book --port COM5 book.txt --protocol zmodem
+python -m uart_ble recv-book --port COM6 received --protocol zmodem
+```
 
 ## 增加一种适配器
 
